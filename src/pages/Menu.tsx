@@ -1,37 +1,35 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-
-type MenuItem = {
-  id: string
-  name: string
-  category: 'Coffee' | 'Tea' | 'Snacks' | 'Desserts'
-  price: number
-  image: string
-  rating: number
-}
-
-const MENU: MenuItem[] = [
-  { id: 'c1', name: 'Espresso', category: 'Coffee', price: 120, image: 'https://picsum.photos/seed/espresso/400/300', rating: 4.5 },
-  { id: 'c2', name: 'Cappuccino', category: 'Coffee', price: 180, image: 'https://picsum.photos/seed/cappuccino/400/300', rating: 4.7 },
-  { id: 't1', name: 'Masala Chai', category: 'Tea', price: 100, image: 'https://picsum.photos/seed/chai/400/300', rating: 4.6 },
-  { id: 's1', name: 'Veg Sandwich', category: 'Snacks', price: 150, image: 'https://picsum.photos/seed/sandwich/400/300', rating: 4.3 },
-  { id: 'd1', name: 'Chocolate Brownie', category: 'Desserts', price: 130, image: 'https://picsum.photos/seed/brownie/400/300', rating: 4.8 },
-]
-
-const categories = ['All', 'Coffee', 'Tea', 'Snacks', 'Desserts'] as const
+import { MENU_CATEGORIES, MENU_ITEMS } from '../data/menu'
+import { useCart } from '../stores/cart'
+import type { MenuItem } from '../data/menu'
 
 export function MenuPage() {
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<(typeof categories)[number]>('All')
-  const [price, setPrice] = useState(300)
+  const [category, setCategory] = useState<(typeof MENU_CATEGORIES)[number]>('All')
+  const [price, setPrice] = useState(400)
+  const [minRating, setMinRating] = useState(0)
+  const add = useCart(s => s.add)
+  const remove = useCart(s => s.remove)
+  const itemsMap = useCart(s => s.items)
 
   const results = useMemo(() => {
-    return MENU.filter(item =>
+    return MENU_ITEMS.filter(item =>
       (category === 'All' || item.category === category) &&
       item.price <= price &&
-      item.name.toLowerCase().includes(query.toLowerCase())
+      item.name.toLowerCase().includes(query.toLowerCase()) &&
+      item.rating >= minRating
     )
-  }, [query, category, price])
+  }, [query, category, price, minRating])
+
+  const allVisibleSelected = results.length > 0 && results.every(r => itemsMap[r.id])
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      results.forEach(r => remove(r.id))
+    } else {
+      results.forEach(r => add(r))
+    }
+  }
 
   return (
     <div className="container-px mx-auto py-8">
@@ -40,31 +38,66 @@ export function MenuPage() {
         <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
           <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search" className="w-full md:w-64 border border-coffee-200 rounded-md px-3 py-2 bg-white" />
           <select value={category} onChange={e=>setCategory(e.target.value as any)} className="border border-coffee-200 rounded-md px-3 py-2 bg-white">
-            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            {MENU_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <div className="flex items-center gap-2">
             <span className="text-sm text-coffee-700">Up to ₹{price}</span>
             <input type="range" min={50} max={400} value={price} onChange={e=>setPrice(parseInt(e.target.value))} />
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-coffee-700">Min rating {minRating}★</span>
+            <input type="range" min={0} max={5} step={0.5} value={minRating} onChange={e=>setMinRating(parseFloat(e.target.value))} />
+          </div>
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-        {results.map(item => (
-          <motion.div key={item.id} whileHover={{ y: -4 }} className="bg-white rounded-xl overflow-hidden shadow border border-coffee-100">
-            <img src={item.image} alt={item.name} className="w-full h-40 object-cover" />
-            <div className="p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">{item.name}</h3>
-                <span className="text-coffee-700">₹{item.price}</span>
-              </div>
-              <div className="text-sm text-yellow-600">{'★'.repeat(Math.round(item.rating))} <span className="text-coffee-600">({item.rating.toFixed(1)})</span></div>
-              <button className="btn-primary w-full">Add to Cart</button>
-            </div>
-          </motion.div>
+      {/* Specials Section */}
+      <div className="mt-6">
+        <h3 className="text-xl font-display text-maroon mb-2">Today’s Specials</h3>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {results.filter(r => r.category === 'Specials').slice(0,3).map(item => (
+            <MenuCard key={item.id} item={item} />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {results.filter(r => r.category !== 'Specials').map(item => (
+          <MenuCard key={item.id} item={item} />
         ))}
       </div>
     </div>
+  )
+}
+
+function MenuCard({ item }: { item: MenuItem }) {
+  const add = useCart(s => s.add)
+  const [qty, setQty] = useState(1)
+  return (
+    <motion.div whileHover={{ y: -4 }} className="bg-white rounded-xl overflow-hidden shadow border border-coffee-100">
+      <img src={item.image} alt={item.name} className="w-full h-40 object-cover" />
+      <div className="p-4 space-y-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="font-semibold text-charcoal">{item.name}</div>
+            {item.description && <div className="text-sm text-warmbrown">{item.description}</div>}
+          </div>
+          <div className="text-peacock">{'★'.repeat(Math.round(item.rating))} <span className="text-coffee-600">({item.rating.toFixed(1)})</span></div>
+        </div>
+        <div className="flex items-center gap-2">
+          {item.badges?.map(b => (
+            <span key={b} className={`text-xs px-2 py-0.5 rounded ${b==='Best Seller'?'bg-maroon text-cream': b==="Chef's Choice"?'bg-turmeric text-charcoal': b==='Spicy'?'bg-peacock text-white':'bg-mango text-charcoal'}`}>{b}</span>
+          ))}
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="text-coffee-700 font-medium">₹{item.price}</div>
+          <div className="flex items-center gap-2">
+            <input type="number" min={1} className="w-16 border rounded px-2 py-1" value={qty} onChange={e=>setQty(Math.max(1, parseInt(e.target.value||'1')))} />
+            <button className="btn-primary" onClick={()=>{ for (let i=0;i<qty;i++) add(item) }}>Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   )
 }
 

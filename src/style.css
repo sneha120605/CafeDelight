@@ -7,13 +7,13 @@
     height: 100%;
   }
   body {
-    @apply bg-coffee-50 text-coffee-900 font-body antialiased;
+    @apply bg-gradient-to-br from-cream via-white to-coffee-200 text-charcoal font-body antialiased min-h-screen;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-coffee-600 text-white px-4 py-2 rounded-md hover:bg-coffee-700 transition-colors;
+    @apply bg-rosevale text-white px-4 py-2 rounded-md hover:bg-mango transition-colors;
   }
   .container-px {
     @apply px-4 sm:px-6 lg:px-8;

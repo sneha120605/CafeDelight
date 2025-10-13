@@ -5,17 +5,19 @@ import './style.css'
 
 import { AppLayout } from './ui/AppLayout'
 import { HomePage } from './pages/Home'
+import { WelcomePage } from './pages/Welcome'
 import { MenuPage } from './pages/Menu'
 import { CartPage } from './pages/Cart'
 import { CheckoutPage } from './pages/Checkout'
 import { OrderStatusPage } from './pages/OrderStatus'
 
 const router = createBrowserRouter([
+  { path: '/', element: <WelcomePage /> },
   {
     path: '/',
     element: <AppLayout />,
     children: [
-      { index: true, element: <HomePage /> },
+      { path: 'home', element: <HomePage /> },
       { path: 'menu', element: <MenuPage /> },
       { path: 'cart', element: <CartPage /> },
       { path: 'checkout', element: <CheckoutPage /> },
